@@ -23,8 +23,8 @@ test = [
 ]
 
 [project.urls]
-Repository = "https://github.com/antigravity-team/double-lenses"
-Documentation = "https://github.com/antigravity-team/double-lenses#readme"
+Repository = "https://github.com/dkarapetyan-afk/double-lenses"
+Documentation = "https://github.com/dkarapetyan-afk/double-lenses#readme"
 
 [project.scripts]
 double-lenses = "double_lenses.cli:main"
