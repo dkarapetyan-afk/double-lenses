@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "double-lenses"
+version = "0.1.0"
+description = "The Double Category of Lenses and Distributed Neural Network Runtime for Mixtral and DeepSeek"
+authors = [
+    { name = "Antigravity Team" }
+]
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24.0",
+]
+
+[project.optional-dependencies]
+torch = ["torch>=2.0.0"]
+test = [
+    "pytest>=7.0.0",
+]
+
+[project.urls]
+Repository = "https://github.com/antigravity-team/double-lenses"
+Documentation = "https://github.com/antigravity-team/double-lenses#readme"
+
+[project.scripts]
+double-lenses = "double_lenses.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["double_lenses*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
