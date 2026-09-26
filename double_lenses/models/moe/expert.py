@@ -3,10 +3,9 @@ Expert Lens implementation wrapping SwiGLU Feed-Forward Networks.
 Supports placement on specific cluster hardware (GPU/CPU) and staging.
 """
 
-from typing import Optional
-from double_lenses.autodiff.tensor import Tensor
-from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
 from double_lenses.autodiff.layers import SwiGLULens
+from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
+from double_lenses.autodiff.tensor import Tensor
 
 
 class ExpertLens(ParameterizedLens):
@@ -14,7 +13,8 @@ class ExpertLens(ParameterizedLens):
     A single SwiGLU expert lens:
       SwiGLU(x) = (silu(x W_gate^T) * (x W_up^T)) W_down^T
     """
-    def __init__(self, name: str, in_dim: int, hidden_dim: int, out_dim: Optional[int] = None, expert_id: int = 0):
+
+    def __init__(self, name: str, in_dim: int, hidden_dim: int, out_dim: int | None = None, expert_id: int = 0):
         super().__init__(name=name)
         self.expert_id = expert_id
         self.swiglu = SwiGLULens(name=f"{name}.swiglu", in_dim=in_dim, hidden_dim=hidden_dim, out_dim=out_dim)

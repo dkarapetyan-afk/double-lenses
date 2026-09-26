@@ -3,14 +3,16 @@ Full Mixtral Transformer Block and End-to-End Language Model Lens.
 Composed entirely of categorical lenses with exact analytical forward and adjoint lifting.
 """
 
-from typing import List, Optional, Tuple, Union
+from typing import Union
+
 import numpy as np
-from double_lenses.autodiff.tensor import Tensor
+
+from double_lenses.autodiff.layers import EmbeddingLens, LinearLens, RMSNormLens
 from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
-from double_lenses.autodiff.layers import RMSNormLens, LinearLens, EmbeddingLens
+from double_lenses.autodiff.tensor import Tensor
 from double_lenses.models.attention.gqa import GroupedQueryAttentionLens
-from double_lenses.models.moe.mixtral_moe import MixtralMoELens
 from double_lenses.models.config import MixtralConfig
+from double_lenses.models.moe.mixtral_moe import MixtralMoELens
 
 
 class MixtralTransformerBlockLens(ParameterizedLens):
@@ -19,6 +21,7 @@ class MixtralTransformerBlockLens(ParameterizedLens):
       h = x + GQA(RMSNorm_1(x))
       out = h + MoE(RMSNorm_2(h))
     """
+
     def __init__(self, name: str, config: MixtralConfig):
         super().__init__(name=name)
         self.config = config
@@ -76,12 +79,13 @@ class MixtralModelLens(ParameterizedLens):
     Complete Mixtral Language Model:
       tokens -> Embedding -> N x TransformerBlocks -> Final RMSNorm -> LM Head -> Logits
     """
+
     def __init__(self, name: str, config: MixtralConfig):
         super().__init__(name=name)
         self.config = config
 
         self.tok_embeddings = EmbeddingLens(f"{name}.tok_embeddings", config.vocab_size, config.dim)
-        self.layers: List[MixtralTransformerBlockLens] = []
+        self.layers: list[MixtralTransformerBlockLens] = []
         for i in range(config.n_layers):
             layer = MixtralTransformerBlockLens(f"{name}.layer_{i}", config=config)
             self.layers.append(layer)
@@ -122,7 +126,7 @@ class MixtralModelLens(ParameterizedLens):
         ctx_embed = ctx.sub_contexts[0]
         ctx_norm = ctx.sub_contexts[1]
         ctx_lm = ctx.sub_contexts[2]
-        layer_contexts = ctx.sub_contexts[3:3 + len(self.layers)]
+        layer_contexts = ctx.sub_contexts[3 : 3 + len(self.layers)]
 
         # 1. Pullback through LM head
         grad_norm_h = self.lm_head.adjoint(ctx_lm, grad_logits)

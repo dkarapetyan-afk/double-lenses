@@ -3,9 +3,11 @@ Delta Lenses and Vertical Lens Composition.
 Based on Bryce Clarke (2022), Chapter 2, Section 2.1.
 """
 
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from collections.abc import Callable
+from typing import Any
+
 from double_lenses.category.base import Category, Functor, identity_functor
-from double_lenses.category.cofunctor import Cofunctor, identity_cofunctor
+from double_lenses.category.cofunctor import Cofunctor
 
 
 class DeltaLens:
@@ -18,6 +20,7 @@ class DeltaLens:
       (L2) ϕ(a, 1_{fa}) = 1_a
       (L3) ϕ(a, v ∘ u) = ϕ(p(a, u), v) ∘ ϕ(a, u)
     """
+
     def __init__(
         self,
         name: str,
@@ -54,7 +57,7 @@ class DeltaLens:
         phi = self.lift(a, u)
         return self.source.cod(phi)
 
-    def compose(self, other: 'DeltaLens') -> 'DeltaLens':
+    def compose(self, other: "DeltaLens") -> "DeltaLens":
         """
         Vertical composition of lenses: self ∘ other: A -> C (Clarke Eq. 2.1)
         where other: A -> B and self: B -> C.
@@ -78,7 +81,7 @@ class DeltaLens:
             lift_fn=composed_lift,
         )
 
-    def validate_axioms(self) -> Tuple[bool, Optional[str]]:
+    def validate_axioms(self) -> tuple[bool, str | None]:
         """
         Validates axioms L1, L2, L3:
           (L1) f(ϕ(a, u)) = u
@@ -116,7 +119,10 @@ class DeltaLens:
                             phi_v = self.lift(pa_u, v)
                             comp_lifts = self.source.compose(phi_v, phi_u)
                             if phi_vu != comp_lifts:
-                                return False, f"Axiom L3 failed: ϕ(a, v∘u)={phi_vu} != ϕ(p(a,u), v) ∘ ϕ(a,u)={comp_lifts}"
+                                return (
+                                    False,
+                                    f"Axiom L3 failed: ϕ(a, v∘u)={phi_vu} != ϕ(p(a,u), v) ∘ ϕ(a,u)={comp_lifts}",
+                                )
         return True, None
 
     def category_of_chosen_lifts(self) -> Category:

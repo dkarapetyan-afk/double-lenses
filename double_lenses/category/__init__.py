@@ -12,33 +12,33 @@ from double_lenses.category.cofunctor import (
     Cofunctor,
     identity_cofunctor,
 )
+from double_lenses.category.double_category import (
+    DoubleCategory,
+    DoubleCategoryCof,
+    DoubleCell,
+)
 from double_lenses.category.lens import (
     DeltaLens,
     identity_lens,
 )
-from double_lenses.category.double_category import (
-    DoubleCell,
-    DoubleCategory,
-    DoubleCategoryCof,
+from double_lenses.category.monoidal import (
+    product_category,
+    swap_functor,
+    tensor_cofunctor,
+    tensor_double_cell,
+    tensor_functor,
+    tensor_lens,
 )
 from double_lenses.category.right_connected import (
-    RightConnectedCompletion,
     DoubleCategoryLens,
+    RightConnectedCompletion,
 )
 from double_lenses.category.span_repr import (
     Span,
-    tabulator_of_cofunctor,
-    span_representation_of_lens,
     companion_of_functor,
     conjoint_of_functor,
-)
-from double_lenses.category.monoidal import (
-    product_category,
-    tensor_functor,
-    tensor_cofunctor,
-    tensor_lens,
-    tensor_double_cell,
-    swap_functor,
+    span_representation_of_lens,
+    tabulator_of_cofunctor,
 )
 
 __all__ = [

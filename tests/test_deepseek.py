@@ -3,13 +3,14 @@ Unit and Integration Tests for DeepSeek Architecture Lenses (MLA, DeepSeekMoE, M
 """
 
 import numpy as np
-from double_lenses.autodiff.tensor import Tensor, randn
-from double_lenses.autodiff.param_lens import LensContext
+
 from double_lenses.autodiff.loss import CrossEntropyLossLens
-from double_lenses.models.config import DeepSeekConfig
+from double_lenses.autodiff.param_lens import LensContext
+from double_lenses.autodiff.tensor import randn
 from double_lenses.models.attention.mla import MultiHeadLatentAttentionLens
+from double_lenses.models.config import DeepSeekConfig
+from double_lenses.models.deepseek import DeepSeekModelLens
 from double_lenses.models.moe.deepseek_moe import DeepSeekMoELens
-from double_lenses.models.deepseek import DeepSeekTransformerBlockLens, DeepSeekModelLens
 
 
 def test_mla_forward_and_adjoint():

@@ -3,8 +3,9 @@ Parameterized Lenses Para(Lens) and Contexts for Adjoint Autodiff.
 Implements the categorical chain rule and gradient accumulation.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
-from double_lenses.autodiff.tensor import Tensor, zeros
+from typing import Any
+
+from double_lenses.autodiff.tensor import Tensor
 
 
 class LensContext:
@@ -12,9 +13,10 @@ class LensContext:
     Context object that stores intermediate forward values needed for the adjoint lift.
     Corresponds to the morphism in the Category of Chosen Lifts Λ(f, ϕ).
     """
+
     def __init__(self):
-        self._saved_tensors: Dict[str, Any] = {}
-        self.sub_contexts: List['LensContext'] = []
+        self._saved_tensors: dict[str, Any] = {}
+        self.sub_contexts: list[LensContext] = []
 
     def save(self, key: str, value: Any) -> None:
         self._saved_tensors[key] = value
@@ -22,7 +24,7 @@ class LensContext:
     def get(self, key: str) -> Any:
         return self._saved_tensors[key]
 
-    def create_sub_context(self) -> 'LensContext':
+    def create_sub_context(self) -> "LensContext":
         sub = LensContext()
         self.sub_contexts.append(sub)
         return sub
@@ -35,9 +37,10 @@ class ParameterizedLens:
       - Adjoint cofunctor: ϕ: (P ⊗ X) ⊗ Y* -> P* ⊗ X*
     Computes both the input cotangent x̄ (pullback) and accumulates parameter gradients ∇w.
     """
+
     def __init__(self, name: str):
         self.name = name
-        self.parameters: Dict[str, Tensor] = {}
+        self.parameters: dict[str, Tensor] = {}
         self.device: str = "cpu"
 
     def register_parameter(self, name: str, tensor: Tensor) -> Tensor:
@@ -49,7 +52,7 @@ class ParameterizedLens:
         for p in self.parameters.values():
             p.zero_grad()
 
-    def to(self, device: str) -> 'ParameterizedLens':
+    def to(self, device: str) -> "ParameterizedLens":
         self.device = device
         for k, p in self.parameters.items():
             self.parameters[k] = p.to(device)
@@ -73,7 +76,7 @@ class ParameterizedLens:
     def __call__(self, ctx: LensContext, x: Tensor) -> Tensor:
         return self.forward(ctx, x)
 
-    def compose(self, other: 'ParameterizedLens') -> 'ComposedLens':
+    def compose(self, other: "ParameterizedLens") -> "ComposedLens":
         """Vertical composition: self ∘ other (first other, then self)."""
         return ComposedLens(first=other, second=self)
 
@@ -85,6 +88,7 @@ class ComposedLens(ParameterizedLens):
       Forward: y = L2(L1(x))
       Adjoint: x̄ = L1.adjoint(L2.adjoint(z̄))
     """
+
     def __init__(self, first: ParameterizedLens, second: ParameterizedLens):
         super().__init__(name=f"{second.name} ∘ {first.name}")
         self.first = first
@@ -117,7 +121,8 @@ class SequentialLens(ParameterizedLens):
     Chains a list of lenses in sequential vertical composition:
     L_N ∘ ... ∘ L_2 ∘ L_1.
     """
-    def __init__(self, name: str, lenses: List[ParameterizedLens]):
+
+    def __init__(self, name: str, lenses: list[ParameterizedLens]):
         super().__init__(name=name)
         self.lenses = lenses
         for idx, lens in enumerate(lenses):

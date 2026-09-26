@@ -6,15 +6,14 @@ Implements:
   - Pipeline Parallelism (PP) Stages
 """
 
-from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
-from double_lenses.autodiff.tensor import Tensor, randn, zeros
+
 from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
-from double_lenses.autodiff.layers import LinearLens
-from double_lenses.models.moe.expert import ExpertLens
-from double_lenses.cluster.topology import DeviceAddress
+from double_lenses.autodiff.tensor import Tensor, randn
+from double_lenses.cluster.collectives import AllReduceFunctor
 from double_lenses.cluster.fabric import CommunicationFabric
-from double_lenses.cluster.collectives import AllReduceFunctor, AllGatherFunctor
+from double_lenses.cluster.topology import DeviceAddress
+from double_lenses.models.moe.expert import ExpertLens
 
 
 class ColumnParallelLinearLens(ParameterizedLens):
@@ -22,6 +21,7 @@ class ColumnParallelLinearLens(ParameterizedLens):
     Column-Parallel Linear Layer shard on a single device:
     Shards W along out_features: W_local is (out_features / num_shards, in_features).
     """
+
     def __init__(self, name: str, in_features: int, out_features_per_shard: int, device: str = "cpu"):
         super().__init__(name=name)
         self.in_features = in_features
@@ -30,8 +30,7 @@ class ColumnParallelLinearLens(ParameterizedLens):
 
         scale = 1.0 / np.sqrt(in_features)
         self.w = self.register_parameter(
-            "weight",
-            randn((out_features_per_shard, in_features), std=scale, device=device)
+            "weight", randn((out_features_per_shard, in_features), std=scale, device=device)
         )
 
     def forward(self, ctx: LensContext, x: Tensor) -> Tensor:
@@ -60,6 +59,7 @@ class RowParallelLinearLens(ParameterizedLens):
     Shards W along in_features: W_local is (out_features, in_features / num_shards).
     Requires AllReduce on output.
     """
+
     def __init__(self, name: str, in_features_per_shard: int, out_features: int, device: str = "cpu"):
         super().__init__(name=name)
         self.in_features_per_shard = in_features_per_shard
@@ -68,8 +68,7 @@ class RowParallelLinearLens(ParameterizedLens):
 
         scale = 1.0 / np.sqrt(in_features_per_shard)
         self.w = self.register_parameter(
-            "weight",
-            randn((out_features, in_features_per_shard), std=scale, device=device)
+            "weight", randn((out_features, in_features_per_shard), std=scale, device=device)
         )
 
     def forward(self, ctx: LensContext, x: Tensor) -> Tensor:
@@ -98,13 +97,14 @@ class TensorParallel2Cell:
       ColumnParallel shards -> AllGather -> RowParallel shards -> AllReduce
     Guarantees mathematical equivalence to a standard full Linear layer.
     """
+
     def __init__(
         self,
         name: str,
         in_features: int,
         hidden_features: int,
         out_features: int,
-        devices: List[DeviceAddress],
+        devices: list[DeviceAddress],
         fabric: CommunicationFabric,
     ):
         self.name = name
@@ -116,8 +116,8 @@ class TensorParallel2Cell:
 
         self.hidden_per_shard = hidden_features // self.num_shards
 
-        self.col_shards: Dict[str, ColumnParallelLinearLens] = {}
-        self.row_shards: Dict[str, RowParallelLinearLens] = {}
+        self.col_shards: dict[str, ColumnParallelLinearLens] = {}
+        self.row_shards: dict[str, RowParallelLinearLens] = {}
 
         for dev in devices:
             dev_str = str(dev)
@@ -156,8 +156,8 @@ class TensorParallel2Cell:
         reduced_grads = self.all_reduce.adjoint(grad_outs)
 
         # Sub contexts: first num_shards are col_shards, next num_shards are row_shards
-        col_ctxs = ctx.sub_contexts[:self.num_shards]
-        row_ctxs = ctx.sub_contexts[self.num_shards:2 * self.num_shards]
+        col_ctxs = ctx.sub_contexts[: self.num_shards]
+        row_ctxs = ctx.sub_contexts[self.num_shards : 2 * self.num_shards]
 
         # 2. Row parallel adjoint
         grad_mids = {}
@@ -185,6 +185,7 @@ class ExpertParallel2Cell:
       Handles routing, token dispatch, parallel execution, output combine,
       and exact distributed adjoint gradient propagation.
     """
+
     def __init__(
         self,
         name: str,
@@ -192,7 +193,7 @@ class ExpertParallel2Cell:
         hidden_dim: int,
         num_experts: int,
         top_k: int,
-        expert_placements: Dict[int, DeviceAddress],
+        expert_placements: dict[int, DeviceAddress],
         fabric: CommunicationFabric,
         ingress_device: DeviceAddress,
     ):
@@ -206,7 +207,7 @@ class ExpertParallel2Cell:
         self.ingress_device = ingress_device
 
         # Experts placed on designated cluster devices
-        self.experts: Dict[int, ExpertLens] = {}
+        self.experts: dict[int, ExpertLens] = {}
         for e_id, dev in expert_placements.items():
             exp = ExpertLens(
                 f"{name}.expert_{e_id}",
@@ -231,10 +232,10 @@ class ExpertParallel2Cell:
         n_tokens = flat_x.shape[0]
         flat_out = np.zeros_like(flat_x)
 
-        expert_token_indices: Dict[int, List[int]] = {i: [] for i in range(self.num_experts)}
-        expert_k_slots: Dict[int, List[int]] = {i: [] for i in range(self.num_experts)}
-        expert_outputs: Dict[int, np.ndarray] = {}
-        expert_contexts: Dict[int, LensContext] = {}
+        expert_token_indices: dict[int, list[int]] = {i: [] for i in range(self.num_experts)}
+        expert_k_slots: dict[int, list[int]] = {i: [] for i in range(self.num_experts)}
+        expert_outputs: dict[int, np.ndarray] = {}
+        expert_contexts: dict[int, LensContext] = {}
 
         for t_idx in range(n_tokens):
             for k_idx in range(self.top_k):
@@ -284,7 +285,7 @@ class ExpertParallel2Cell:
         ctx: LensContext,
         dy_np: np.ndarray,
         flat_weights: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Distributed adjoint pass:
         Pulls back cotangents through expert lenses across cluster devices.

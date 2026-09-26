@@ -3,11 +3,12 @@ Span Representation, Tabulators, Companions, and Conjoints for Lenses.
 Based on Bryce Clarke (2022), Chapter 2, Section 2.4 and Chapter 3, Section 3.4.
 """
 
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
-from double_lenses.category.base import Category, Functor, identity_functor
+from typing import Any
+
+from double_lenses.category.base import Category, Functor
 from double_lenses.category.cofunctor import Cofunctor
-from double_lenses.category.lens import DeltaLens
 from double_lenses.category.double_category import DoubleCell
+from double_lenses.category.lens import DeltaLens
 
 
 class Span:
@@ -19,6 +20,7 @@ class Span:
        v       v
        A       B
     """
+
     def __init__(self, apex: Category, left_leg: Functor, right_leg: Functor):
         assert left_leg.source == apex, "Left leg source must be apex"
         assert right_leg.source == apex, "Right leg source must be apex"
@@ -32,7 +34,7 @@ class Span:
         return f"Span({self.source.name} <- {self.left_leg.name}- {self.apex.name} -{self.right_leg.name}-> {self.target.name})"
 
 
-def tabulator_of_cofunctor(cof: Cofunctor) -> Tuple[Category, Functor, Functor, DoubleCell]:
+def tabulator_of_cofunctor(cof: Cofunctor) -> tuple[Category, Functor, Functor, DoubleCell]:
     """
     Proposition 3.5: The tabulator of a cofunctor (f, ϕ): A -> B is the category Λ(f, ϕ),
     equipped with projection functors:

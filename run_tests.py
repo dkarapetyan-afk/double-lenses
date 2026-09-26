@@ -35,8 +35,7 @@ def run_all_tests():
             continue
 
         test_funcs = [
-            (name, obj) for name, obj in inspect.getmembers(mod, inspect.isfunction)
-            if name.startswith("test_")
+            (name, obj) for name, obj in inspect.getmembers(mod, inspect.isfunction) if name.startswith("test_")
         ]
 
         for func_name, func in test_funcs:

@@ -4,11 +4,11 @@ Supports Top-K selection with Softmax (Mixtral) or Sigmoid (DeepSeek) normalizat
 and exact analytical adjoint cotangent pullback.
 """
 
-from typing import Optional, Tuple
 import numpy as np
-from double_lenses.autodiff.tensor import Tensor, randn, zeros
-from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
+
 from double_lenses.autodiff.layers import LinearLens
+from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
+from double_lenses.autodiff.tensor import Tensor
 
 
 class MoERouterLens(ParameterizedLens):
@@ -18,6 +18,7 @@ class MoERouterLens(ParameterizedLens):
       - Selects top-k experts per token
       - Normalizes routing weights via softmax or sigmoid
     """
+
     def __init__(self, name: str, dim: int, num_experts: int, top_k: int = 2, use_softmax: bool = True):
         super().__init__(name=name)
         self.dim = dim
@@ -29,7 +30,7 @@ class MoERouterLens(ParameterizedLens):
         for k, v in self.w_gate.parameters.items():
             self.parameters[f"w_gate.{k}"] = v
 
-    def forward(self, ctx: LensContext, x: Tensor) -> Tuple[np.ndarray, np.ndarray]:
+    def forward(self, ctx: LensContext, x: Tensor) -> tuple[np.ndarray, np.ndarray]:
         """
         Returns:
           routing_weights: (..., top_k)
@@ -43,7 +44,7 @@ class MoERouterLens(ParameterizedLens):
         n_tokens = flat_logits.shape[0]
 
         # Top-k selection
-        top_indices = np.argsort(-flat_logits, axis=-1)[:, :self.top_k]  # (n_tokens, top_k)
+        top_indices = np.argsort(-flat_logits, axis=-1)[:, : self.top_k]  # (n_tokens, top_k)
         top_logits = np.take_along_axis(flat_logits, top_indices, axis=-1)  # (n_tokens, top_k)
 
         if self.use_softmax:

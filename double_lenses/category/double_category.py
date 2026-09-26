@@ -3,9 +3,11 @@ Double Categories, Double Cells (Squares), and the Flat Double Category Cof.
 Based on Bryce Clarke (2022), Chapter 3, Section 3.1 and Appendix A.
 """
 
-from typing import Any, Callable, Dict, Generic, List, Optional, Set, Tuple, TypeVar
+from collections.abc import Callable
+from typing import Any
+
 from double_lenses.category.base import Category, Functor, identity_functor
-from double_lenses.category.cofunctor import Cofunctor, identity_cofunctor
+from double_lenses.category.cofunctor import Cofunctor
 
 
 class DoubleCell:
@@ -24,6 +26,7 @@ class DoubleCell:
       left: v (vertical morphism A ⇸ B)
       right: w (vertical morphism C ⇸ D)
     """
+
     def __init__(
         self,
         name: str,
@@ -31,7 +34,7 @@ class DoubleCell:
         bottom: Functor,
         left: Any,  # vertical arrow (Cofunctor, DeltaLens, or generic)
         right: Any,  # vertical arrow
-        payload: Optional[Any] = None,
+        payload: Any | None = None,
     ):
         self.name = name
         self.top = top
@@ -51,14 +54,16 @@ class DoubleCell:
         assert right.source == self.top_right, "Right arrow source must match top arrow target"
         assert right.target == self.bottom_right, "Right arrow target must match bottom arrow target"
 
-    def compose_horizontal(self, other: 'DoubleCell') -> 'DoubleCell':
+    def compose_horizontal(self, other: "DoubleCell") -> "DoubleCell":
         """
         Horizontal composition θ_2 ∘_h θ_1:
         self is θ_2 (C -> E), other is θ_1 (A -> C).
         Requires self.left == other.right.
         """
         if self.left != other.right:
-            raise ValueError(f"Horizontal cell composition error: self.left ({self.left}) != other.right ({other.right})")
+            raise ValueError(
+                f"Horizontal cell composition error: self.left ({self.left}) != other.right ({other.right})"
+            )
 
         comp_top = self.top.compose(other.top)
         comp_bottom = self.bottom.compose(other.bottom)
@@ -71,7 +76,7 @@ class DoubleCell:
             payload=(self.payload, other.payload),
         )
 
-    def compose_vertical(self, other: 'DoubleCell') -> 'DoubleCell':
+    def compose_vertical(self, other: "DoubleCell") -> "DoubleCell":
         """
         Vertical composition θ_2 ∘_v θ_1:
         self is θ_2 (B ⇸ X), other is θ_1 (A ⇸ B).
@@ -107,6 +112,7 @@ class DoubleCategory:
       - Vertical morphisms: vertical arrows
       - 2-cells: double squares
     """
+
     def __init__(self, name: str):
         self.name = name
 
@@ -136,8 +142,10 @@ class DoubleCategory:
 
     @staticmethod
     def verify_interchange(
-        c11: DoubleCell, c12: DoubleCell,
-        c21: DoubleCell, c22: DoubleCell,
+        c11: DoubleCell,
+        c12: DoubleCell,
+        c21: DoubleCell,
+        c22: DoubleCell,
     ) -> bool:
         """
         Verifies the Interchange Law:
@@ -179,6 +187,7 @@ class DoubleCategoryCof(DoubleCategory):
           1) g_0 ∘ h_0 = k_0 ∘ f_0
           2) h_1(ϕ(a, u)) = γ(h_0(a), k_1(u)) for all a ∈ A_0, u: fa -> b
     """
+
     def __init__(self):
         super().__init__(name="Cof")
 
@@ -196,7 +205,7 @@ class DoubleCategoryCof(DoubleCategory):
             raise ValueError(f"Cell {name} violates Cof compatibility: {msg}")
         return cell
 
-    def validate_cell(self, cell: DoubleCell) -> Tuple[bool, Optional[str]]:
+    def validate_cell(self, cell: DoubleCell) -> tuple[bool, str | None]:
         h = cell.top
         k = cell.bottom
         left: Cofunctor = cell.left

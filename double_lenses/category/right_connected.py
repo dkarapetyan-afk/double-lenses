@@ -4,11 +4,10 @@ Formalizes Theorem 3.21: Lens ≅ Γ(Cof).
 Based on Bryce Clarke (2022), Chapter 3, Section 3.2 and 3.3.
 """
 
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
-from double_lenses.category.base import Category, Functor, identity_functor
+from double_lenses.category.base import Functor, identity_functor
 from double_lenses.category.cofunctor import Cofunctor, identity_cofunctor
+from double_lenses.category.double_category import DoubleCategory, DoubleCategoryCof, DoubleCell
 from double_lenses.category.lens import DeltaLens
-from double_lenses.category.double_category import DoubleCell, DoubleCategory, DoubleCategoryCof
 
 
 class RightConnectedCompletion(DoubleCategory):
@@ -29,11 +28,12 @@ class RightConnectedCompletion(DoubleCategory):
 
     Theorem 3.21: The double category of lenses Lens is isomorphic to Γ(Cof).
     """
-    def __init__(self, base_double_cat: Optional[DoubleCategory] = None):
+
+    def __init__(self, base_double_cat: DoubleCategory | None = None):
         super().__init__(name="Γ(Cof)")
         self.base_double_cat = base_double_cat or DoubleCategoryCof()
 
-    def lens_to_vertical_arrow(self, lens: DeltaLens) -> Tuple[Cofunctor, DoubleCell, Functor]:
+    def lens_to_vertical_arrow(self, lens: DeltaLens) -> tuple[Cofunctor, DoubleCell, Functor]:
         """
         Maps a DeltaLens (f, ϕ): A -> B to a vertical arrow in Γ(Cof):
         A cell α in Cof:
@@ -77,9 +77,9 @@ class RightConnectedCompletion(DoubleCategory):
 
     def compose_vertical_arrows(
         self,
-        v2: Tuple[Cofunctor, DoubleCell, Functor],  # B -> C
-        v1: Tuple[Cofunctor, DoubleCell, Functor],  # A -> B
-    ) -> Tuple[Cofunctor, DoubleCell, Functor]:
+        v2: tuple[Cofunctor, DoubleCell, Functor],  # B -> C
+        v1: tuple[Cofunctor, DoubleCell, Functor],  # A -> B
+    ) -> tuple[Cofunctor, DoubleCell, Functor]:
         """
         Definition 3.12 (Vertical composition in Γ(D)):
         Vertical composition of (f, α, f') and (g, β, g') is given by the composite cell in D:
@@ -113,6 +113,7 @@ class DoubleCategoryLens(DoubleCategory):
           1) g ∘ h = k ∘ f (commutes horizontally)
           2) h_1(ϕ(a, u)) = γ(h_0(a), k_1(u)) for all a ∈ A_0, u: fa -> b
     """
+
     def __init__(self):
         super().__init__(name="Lens")
         self.completion = RightConnectedCompletion()
@@ -131,7 +132,7 @@ class DoubleCategoryLens(DoubleCategory):
             raise ValueError(f"Cell {name} violates Lens compatibility: {msg}")
         return cell
 
-    def validate_cell(self, cell: DoubleCell) -> Tuple[bool, Optional[str]]:
+    def validate_cell(self, cell: DoubleCell) -> tuple[bool, str | None]:
         h = cell.top
         k = cell.bottom
         left: DeltaLens = cell.left
@@ -161,6 +162,9 @@ class DoubleCategoryLens(DoubleCategory):
                     ku = k.on_morphism(u)
                     gamma_ha_ku = right.lift(ha, ku)
                     if h_phi != gamma_ha_ku:
-                        return False, f"Lifting mismatch at (a={a}, u={u}): h(ϕ(a,u))={h_phi} != γ(ha, ku)={gamma_ha_ku}"
+                        return (
+                            False,
+                            f"Lifting mismatch at (a={a}, u={u}): h(ϕ(a,u))={h_phi} != γ(ha, ku)={gamma_ha_ku}",
+                        )
 
         return True, None

@@ -3,13 +3,13 @@ Mixtral Sparse Mixture of Experts (SMoE) Lens.
 Top-2 routing over 8 SwiGLU experts with exact forward and adjoint cotangent lifting.
 """
 
-from typing import Dict, List, Optional, Tuple
 import numpy as np
-from double_lenses.autodiff.tensor import Tensor, zeros
+
 from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
-from double_lenses.models.moe.router import MoERouterLens
-from double_lenses.models.moe.expert import ExpertLens
+from double_lenses.autodiff.tensor import Tensor
 from double_lenses.models.config import MixtralConfig
+from double_lenses.models.moe.expert import ExpertLens
+from double_lenses.models.moe.router import MoERouterLens
 
 
 class MixtralMoELens(ParameterizedLens):
@@ -20,6 +20,7 @@ class MixtralMoELens(ParameterizedLens):
       - Dispatch: Gathers tokens assigned to each expert
       - Combine: Sums outputs weighted by normalized gating weights
     """
+
     def __init__(self, name: str, config: MixtralConfig):
         super().__init__(name=name)
         self.config = config
@@ -40,7 +41,7 @@ class MixtralMoELens(ParameterizedLens):
             self.parameters[f"router.{k}"] = v
 
         # Expert lenses
-        self.experts: List[ExpertLens] = []
+        self.experts: list[ExpertLens] = []
         for i in range(self.num_experts):
             exp = ExpertLens(
                 name=f"{name}.expert_{i}",
@@ -68,10 +69,10 @@ class MixtralMoELens(ParameterizedLens):
         flat_out = np.zeros_like(flat_x)
 
         # Cache expert inputs and contexts for adjoint
-        expert_contexts: Dict[int, LensContext] = {}
-        expert_token_indices: Dict[int, List[int]] = {i: [] for i in range(self.num_experts)}
-        expert_k_slots: Dict[int, List[int]] = {i: [] for i in range(self.num_experts)}
-        expert_outputs: Dict[int, np.ndarray] = {}
+        expert_contexts: dict[int, LensContext] = {}
+        expert_token_indices: dict[int, list[int]] = {i: [] for i in range(self.num_experts)}
+        expert_k_slots: dict[int, list[int]] = {i: [] for i in range(self.num_experts)}
+        expert_outputs: dict[int, np.ndarray] = {}
 
         # 1. Bucket tokens by assigned expert
         for t_idx in range(n_tokens):
@@ -116,13 +117,11 @@ class MixtralMoELens(ParameterizedLens):
         ctx_router = ctx.sub_contexts[0]
         flat_x = ctx.get("flat_x")
         flat_weights = ctx.get("flat_weights")
-        flat_experts = ctx.get("flat_experts")
         expert_contexts = ctx.get("expert_contexts")
         expert_token_indices = ctx.get("expert_token_indices")
         expert_k_slots = ctx.get("expert_k_slots")
         expert_outputs = ctx.get("expert_outputs")
         orig_shape = ctx.get("orig_shape")
-        n_tokens = ctx.get("n_tokens")
 
         dy_np = grad_y.to_numpy().reshape(-1, self.dim)
 

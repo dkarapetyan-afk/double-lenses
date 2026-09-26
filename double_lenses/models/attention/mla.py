@@ -3,11 +3,11 @@ Multi-Head Latent Attention (MLA) Lens for DeepSeek-V2/V3.
 Implements low-rank KV compression, decoupled RoPE, and exact analytical adjoint lifting.
 """
 
-from typing import Optional, Tuple
 import numpy as np
-from double_lenses.autodiff.tensor import Tensor, randn, zeros
-from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
+
 from double_lenses.autodiff.layers import LinearLens, RoPELens, SoftmaxLens
+from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
+from double_lenses.autodiff.tensor import Tensor
 from double_lenses.models.config import DeepSeekConfig
 
 
@@ -21,6 +21,7 @@ class MultiHeadLatentAttentionLens(ParameterizedLens):
       - Attention score combines content matching with decoupled positional matching:
           Score = (q^C k^{C,T} + q^R k^{R,T}) / sqrt(d_h + d_R)
     """
+
     def __init__(self, name: str, config: DeepSeekConfig):
         super().__init__(name=name)
         self.config = config
@@ -129,12 +130,9 @@ class MultiHeadLatentAttentionLens(ParameterizedLens):
         return out
 
     def adjoint(self, ctx: LensContext, grad_y: Tensor) -> Tensor:
-        (
-            ctx_dkv, ctx_uk, ctx_uv, ctx_kr,
-            ctx_dq, ctx_uq, ctx_qr,
-            ctx_rope_k, ctx_rope_q,
-            ctx_sm, ctx_out
-        ) = ctx.sub_contexts[:11]
+        (ctx_dkv, ctx_uk, ctx_uv, ctx_kr, ctx_dq, ctx_uq, ctx_qr, ctx_rope_k, ctx_rope_q, ctx_sm, ctx_out) = (
+            ctx.sub_contexts[:11]
+        )
 
         qc_np = ctx.get("qc_np")
         kc_np = ctx.get("kc_np")
@@ -147,7 +145,11 @@ class MultiHeadLatentAttentionLens(ParameterizedLens):
 
         # 1. Pullback through out_proj
         grad_context_trans = self.out_proj.adjoint(ctx_out, grad_y)
-        grad_context = grad_context_trans.to_numpy().reshape(batch_size, seq_len, self.n_heads, self.v_head_dim).transpose(0, 2, 1, 3)
+        grad_context = (
+            grad_context_trans.to_numpy()
+            .reshape(batch_size, seq_len, self.n_heads, self.v_head_dim)
+            .transpose(0, 2, 1, 3)
+        )
 
         # 2. Pullback through context = attn_weights @ vc_np
         grad_vc_np = np.matmul(attn_weights.transpose(0, 1, 3, 2), grad_context)
@@ -172,18 +174,25 @@ class MultiHeadLatentAttentionLens(ParameterizedLens):
 
         # 5. Reshape and pull back RoPE
         grad_qr = self.rope_q.adjoint(
-            ctx_rope_q,
-            Tensor(grad_qr_np.transpose(0, 2, 1, 3), device=grad_y.device)
+            ctx_rope_q, Tensor(grad_qr_np.transpose(0, 2, 1, 3), device=grad_y.device)
         ).reshape(batch_size, seq_len, self.n_heads * self.qk_rope_head_dim)
 
         grad_kr = self.rope_k.adjoint(
-            ctx_rope_k,
-            Tensor(grad_kr_sum.transpose(0, 2, 1, 3), device=grad_y.device)
+            ctx_rope_k, Tensor(grad_kr_sum.transpose(0, 2, 1, 3), device=grad_y.device)
         ).reshape(batch_size, seq_len, self.qk_rope_head_dim)
 
-        grad_qc = Tensor(grad_qc_np.transpose(0, 2, 1, 3).reshape(batch_size, seq_len, self.n_heads * self.head_dim), device=grad_y.device)
-        grad_kc = Tensor(grad_kc_np.transpose(0, 2, 1, 3).reshape(batch_size, seq_len, self.n_heads * self.head_dim), device=grad_y.device)
-        grad_vc = Tensor(grad_vc_np.transpose(0, 2, 1, 3).reshape(batch_size, seq_len, self.n_heads * self.v_head_dim), device=grad_y.device)
+        grad_qc = Tensor(
+            grad_qc_np.transpose(0, 2, 1, 3).reshape(batch_size, seq_len, self.n_heads * self.head_dim),
+            device=grad_y.device,
+        )
+        grad_kc = Tensor(
+            grad_kc_np.transpose(0, 2, 1, 3).reshape(batch_size, seq_len, self.n_heads * self.head_dim),
+            device=grad_y.device,
+        )
+        grad_vc = Tensor(
+            grad_vc_np.transpose(0, 2, 1, 3).reshape(batch_size, seq_len, self.n_heads * self.v_head_dim),
+            device=grad_y.device,
+        )
 
         # 6. Q Path Pullback: c_q
         grad_cq_uq = self.w_uq.adjoint(ctx_uq, grad_qc)

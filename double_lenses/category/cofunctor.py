@@ -3,8 +3,10 @@ Cofunctors and the Category of Chosen Lifts Λ(f, ϕ).
 Based on Bryce Clarke (2022), Chapter 2, Section 2.2 and 2.3.
 """
 
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
-from double_lenses.category.base import Category, Functor
+from collections.abc import Callable
+from typing import Any
+
+from double_lenses.category.base import Category
 
 
 class Cofunctor:
@@ -14,6 +16,7 @@ class Cofunctor:
       - A lifting operation ϕ: (a ∈ A_0, u: fa -> b ∈ B_1) ↦ ϕ(a, u): a -> p(a, u)
     satisfying axioms (C1), (C2), and (C3).
     """
+
     def __init__(
         self,
         name: str,
@@ -43,7 +46,7 @@ class Cofunctor:
         phi = self.lift(a, u)
         return self.source.cod(phi)
 
-    def compose(self, other: 'Cofunctor') -> 'Cofunctor':
+    def compose(self, other: "Cofunctor") -> "Cofunctor":
         """
         Vertical composition of cofunctors: self ∘ other: A -> C
         where other: A -> B and self: B -> C.
@@ -66,7 +69,7 @@ class Cofunctor:
             lift_fn=composed_lift,
         )
 
-    def validate_axioms(self) -> Tuple[bool, Optional[str]]:
+    def validate_axioms(self) -> tuple[bool, str | None]:
         """
         Validates axioms C1, C2, C3:
           (C1) f(p(a, u)) = cod(u)
@@ -91,7 +94,10 @@ class Cofunctor:
                     pa_u = self.source.cod(phi_u)
                     # C1 check
                     if self.on_object(pa_u) != self.target.cod(u):
-                        return False, f"Axiom C1 failed: f(p(a, u))={self.on_object(pa_u)} != cod(u)={self.target.cod(u)}"
+                        return (
+                            False,
+                            f"Axiom C1 failed: f(p(a, u))={self.on_object(pa_u)} != cod(u)={self.target.cod(u)}",
+                        )
 
                     for v in self.target.morphisms:
                         if self.target.dom(v) == self.target.cod(u):
@@ -100,10 +106,13 @@ class Cofunctor:
                             phi_v = self.lift(pa_u, v)
                             comp_lifts = self.source.compose(phi_v, phi_u)
                             if phi_vu != comp_lifts:
-                                return False, f"Axiom C3 failed: ϕ(a, v∘u)={phi_vu} != ϕ(p(a,u), v) ∘ ϕ(a,u)={comp_lifts}"
+                                return (
+                                    False,
+                                    f"Axiom C3 failed: ϕ(a, v∘u)={phi_vu} != ϕ(p(a,u), v) ∘ ϕ(a,u)={comp_lifts}",
+                                )
         return True, None
 
-    def category_of_chosen_lifts(self) -> 'Category':
+    def category_of_chosen_lifts(self) -> "Category":
         """
         Proposition 2.6: Given a cofunctor (f, ϕ): A -> B, constructs Λ(f, ϕ).
         Objects are same as A.
@@ -119,17 +128,17 @@ class Cofunctor:
                 if self.target.dom(u) == fa:
                     morphisms.append((a, u))
 
-        def dom_fn(m: Tuple[Any, Any]) -> Any:
+        def dom_fn(m: tuple[Any, Any]) -> Any:
             return m[0]
 
-        def cod_fn(m: Tuple[Any, Any]) -> Any:
+        def cod_fn(m: tuple[Any, Any]) -> Any:
             a, u = m
             return self.put(a, u)
 
-        def id_fn(a: Any) -> Tuple[Any, Any]:
+        def id_fn(a: Any) -> tuple[Any, Any]:
             return (a, self.target.identity(self.on_object(a)))
 
-        def compose_fn(g: Tuple[Any, Any], f: Tuple[Any, Any]) -> Tuple[Any, Any]:
+        def compose_fn(g: tuple[Any, Any], f: tuple[Any, Any]) -> tuple[Any, Any]:
             # g = (p(a, u), v), f = (a, u)
             a, u = f
             pa_u, v = g

@@ -3,13 +3,14 @@ Unit and Integration Tests for Mixtral Architecture Lenses (GQA, MoE, Block, Mod
 """
 
 import numpy as np
-from double_lenses.autodiff.tensor import Tensor, randn
-from double_lenses.autodiff.param_lens import LensContext
+
 from double_lenses.autodiff.loss import CrossEntropyLossLens
-from double_lenses.models.config import MixtralConfig
+from double_lenses.autodiff.param_lens import LensContext
+from double_lenses.autodiff.tensor import randn
 from double_lenses.models.attention.gqa import GroupedQueryAttentionLens
+from double_lenses.models.config import MixtralConfig
+from double_lenses.models.mixtral import MixtralModelLens
 from double_lenses.models.moe.mixtral_moe import MixtralMoELens
-from double_lenses.models.mixtral import MixtralTransformerBlockLens, MixtralModelLens
 
 
 def test_gqa_forward_and_adjoint():

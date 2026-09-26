@@ -3,12 +3,11 @@ Unit tests for Right-Connected Completion and Theorem 3.21: Lens ≅ Γ(Cof).
 Based on Bryce Clarke (2022), Chapter 3, Section 3.2 and 3.3.
 """
 
-from double_lenses.category.base import Category, Functor, identity_functor
-from double_lenses.category.cofunctor import Cofunctor, identity_cofunctor
+from double_lenses.category.base import Category, identity_functor
 from double_lenses.category.lens import DeltaLens
 from double_lenses.category.right_connected import (
-    RightConnectedCompletion,
     DoubleCategoryLens,
+    RightConnectedCompletion,
 )
 
 

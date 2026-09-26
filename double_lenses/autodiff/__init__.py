@@ -2,30 +2,30 @@
 Categorical Reverse Derivative & Parameterized Lens Autodiff Engine.
 """
 
-from double_lenses.autodiff.tensor import (
-    Tensor,
-    zeros,
-    ones,
-    randn,
-)
-from double_lenses.autodiff.param_lens import (
-    LensContext,
-    ParameterizedLens,
-    ComposedLens,
-    SequentialLens,
-)
 from double_lenses.autodiff.layers import (
+    EmbeddingLens,
     LinearLens,
     RMSNormLens,
-    SiLULens,
-    SwiGLULens,
-    SoftmaxLens,
     RoPELens,
-    EmbeddingLens,
+    SiLULens,
+    SoftmaxLens,
+    SwiGLULens,
 )
 from double_lenses.autodiff.loss import (
     CrossEntropyLossLens,
     MSELossLens,
+)
+from double_lenses.autodiff.param_lens import (
+    ComposedLens,
+    LensContext,
+    ParameterizedLens,
+    SequentialLens,
+)
+from double_lenses.autodiff.tensor import (
+    Tensor,
+    ones,
+    randn,
+    zeros,
 )
 
 __all__ = [

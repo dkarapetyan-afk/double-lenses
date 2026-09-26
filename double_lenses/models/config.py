@@ -4,7 +4,6 @@ Includes both production configurations and lightweight mini test configurations
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -16,6 +15,7 @@ class MixtralConfig:
       - Rotary Position Embeddings (RoPE)
       - Sparse Mixture-of-Experts (SMoE) with Top-2 routing across 8 SwiGLU experts
     """
+
     dim: int = 4096
     n_layers: int = 32
     n_heads: int = 32
@@ -30,7 +30,7 @@ class MixtralConfig:
     rope_theta: float = 1000000.0
 
     @classmethod
-    def mixtral_mini(cls) -> 'MixtralConfig':
+    def mixtral_mini(cls) -> "MixtralConfig":
         """Lightweight configuration for rapid unit tests, verification, and staging."""
         return cls(
             dim=128,
@@ -48,7 +48,7 @@ class MixtralConfig:
         )
 
     @classmethod
-    def mixtral_8x7b(cls) -> 'MixtralConfig':
+    def mixtral_8x7b(cls) -> "MixtralConfig":
         """Full Mixtral 8x7B configuration."""
         return cls()
 
@@ -61,6 +61,7 @@ class DeepSeekConfig:
       - Multi-Head Latent Attention (MLA): Low-rank KV compression & decoupled RoPE
       - DeepSeekMoE: Fine-grained routed experts + isolated shared experts
     """
+
     dim: int = 2048
     n_layers: int = 28
     n_heads: int = 16
@@ -79,7 +80,7 @@ class DeepSeekConfig:
     rope_theta: float = 10000.0
 
     @classmethod
-    def deepseek_mini(cls) -> 'DeepSeekConfig':
+    def deepseek_mini(cls) -> "DeepSeekConfig":
         """Lightweight configuration for rapid unit tests and cluster staging."""
         return cls(
             dim=128,
@@ -101,7 +102,7 @@ class DeepSeekConfig:
         )
 
     @classmethod
-    def deepseek_v3(cls) -> 'DeepSeekConfig':
+    def deepseek_v3(cls) -> "DeepSeekConfig":
         """Production DeepSeek-V3 configuration."""
         return cls(
             dim=7168,

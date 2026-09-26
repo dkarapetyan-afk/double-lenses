@@ -3,22 +3,23 @@ Communication Fabric for Multi-Node and Multi-Device Distributed Clusters.
 Provides low-latency TCP messaging, buffer serialization, and intra-node direct queues.
 """
 
-import io
+import contextlib
 import json
-import os
 import queue
 import socket
 import struct
 import threading
-import time
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Union
+
 import numpy as np
+
 from double_lenses.autodiff.tensor import Tensor
 from double_lenses.cluster.topology import ClusterTopology, DeviceAddress
 
 
 class Serializer:
     """Zero-overhead binary serializer for Tensors and metadata."""
+
     MAGIC = b"DLNS"
 
     @classmethod
@@ -40,12 +41,12 @@ class Serializer:
         return header + meta_bytes + data_bytes
 
     @classmethod
-    def deserialize_tensor(cls, buf: bytes) -> Tuple[Tensor, str]:
+    def deserialize_tensor(cls, buf: bytes) -> tuple[Tensor, str]:
         magic, meta_len, data_len = struct.unpack("!4sIQ", buf[:16])
         if magic != cls.MAGIC:
             raise ValueError("Corrupt tensor buffer: magic mismatch")
-        meta_bytes = buf[16:16 + meta_len]
-        data_bytes = buf[16 + meta_len:16 + meta_len + data_len]
+        meta_bytes = buf[16 : 16 + meta_len]
+        data_bytes = buf[16 + meta_len : 16 + meta_len + data_len]
 
         meta = json.loads(meta_bytes.decode("utf-8"))
         dtype = np.dtype(meta["dtype"])
@@ -56,6 +57,7 @@ class Serializer:
 
 class SocketConnection:
     """Manages a non-blocking TCP socket stream."""
+
     def __init__(self, sock: socket.socket):
         self.sock = sock
 
@@ -64,7 +66,7 @@ class SocketConnection:
         # Send length prefix
         self.sock.sendall(struct.pack("!I", total_len) + data)
 
-    def recv_msg(self) -> Optional[bytes]:
+    def recv_msg(self) -> bytes | None:
         try:
             len_bytes = self._recv_exact(4)
             if not len_bytes:
@@ -84,28 +86,27 @@ class SocketConnection:
         return bytes(data)
 
     def close(self) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self.sock.close()
-        except Exception:
-            pass
 
 
 class CommunicationFabric:
     """
     Cluster Communication Fabric coordinating multi-node TCP and local in-memory transfers.
     """
+
     def __init__(self, topology: ClusterTopology, local_node_id: str = "node0"):
         self.topology = topology
         self.local_node_id = local_node_id
         self.local_node = topology.nodes.get(local_node_id)
 
         # Local queues for zero-copy intra-node transfers
-        self._local_mailboxes: Dict[str, queue.Queue] = {}
+        self._local_mailboxes: dict[str, queue.Queue] = {}
         # Inbound socket registry
-        self._server_sock: Optional[socket.socket] = None
-        self._server_thread: Optional[threading.Thread] = None
+        self._server_sock: socket.socket | None = None
+        self._server_thread: threading.Thread | None = None
         self._running = False
-        self._active_connections: Dict[str, SocketConnection] = {}
+        self._active_connections: dict[str, SocketConnection] = {}
 
         # Initialize mailboxes for all known devices
         for dev in topology.all_devices():
@@ -132,10 +133,8 @@ class CommunicationFabric:
     def stop(self) -> None:
         self._running = False
         if self._server_sock:
-            try:
+            with contextlib.suppress(Exception):
                 self._server_sock.close()
-            except Exception:
-                pass
         for conn in self._active_connections.values():
             conn.close()
         self._active_connections.clear()
@@ -185,7 +184,7 @@ class CommunicationFabric:
         else:
             self._local_mailboxes[tgt_str].put(tensor.copy())
 
-    def recv(self, device: Union[str, DeviceAddress], timeout: Optional[float] = 10.0) -> Optional[Tensor]:
+    def recv(self, device: Union[str, DeviceAddress], timeout: float | None = 10.0) -> Tensor | None:
         dev_str = str(device)
         if dev_str not in self._local_mailboxes:
             self._local_mailboxes[dev_str] = queue.Queue()
@@ -194,7 +193,7 @@ class CommunicationFabric:
         except queue.Empty:
             return None
 
-    def _get_connection(self, node_id: str, host: str, port: int) -> Optional[SocketConnection]:
+    def _get_connection(self, node_id: str, host: str, port: int) -> SocketConnection | None:
         if node_id in self._active_connections:
             return self._active_connections[node_id]
         try:

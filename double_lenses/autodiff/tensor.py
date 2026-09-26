@@ -3,12 +3,14 @@ Unified Tensor Abstraction supporting both NumPy (CPU) and PyTorch (CUDA GPU/CPU
 Provides high-performance differentiable tensor primitives for forward and adjoint passes.
 """
 
-from typing import Any, List, Optional, Sequence, Tuple, Union
+from typing import Any, Union
+
 import numpy as np
 
 # Try importing torch if available
 try:
     import torch
+
     HAS_TORCH = True
 except ImportError:
     torch = None
@@ -20,6 +22,7 @@ class Tensor:
     Unified Tensor class that holds an underlying ndarray or torch.Tensor.
     Enables forward evaluation, adjoint cotangent calculations, and cluster serialization.
     """
+
     def __init__(self, data: Union[np.ndarray, Any], device: str = "cpu", requires_grad: bool = False):
         if HAS_TORCH and isinstance(data, torch.Tensor):
             self._data = data
@@ -33,14 +36,14 @@ class Tensor:
 
         self.device = device
         self.requires_grad = requires_grad
-        self.grad: Optional['Tensor'] = None
+        self.grad: Tensor | None = None
 
     @property
     def data(self) -> Any:
         return self._data
 
     @property
-    def shape(self) -> Tuple[int, ...]:
+    def shape(self) -> tuple[int, ...]:
         return tuple(self._data.shape)
 
     @property
@@ -57,7 +60,7 @@ class Tensor:
         else:
             return self._data.detach().cpu().numpy()
 
-    def to_torch(self, device: Optional[str] = None) -> Any:
+    def to_torch(self, device: str | None = None) -> Any:
         if not HAS_TORCH:
             raise RuntimeError("PyTorch is not installed in the environment.")
         if self._backend == "torch":
@@ -68,7 +71,7 @@ class Tensor:
             t = t.to(device)
         return t
 
-    def to(self, device: str) -> 'Tensor':
+    def to(self, device: str) -> "Tensor":
         """Transfers tensor to target device (e.g. 'cpu', 'cuda:0')."""
         if device == self.device:
             return self
@@ -91,7 +94,7 @@ class Tensor:
             res.grad = self.grad
             return res
 
-    def copy(self) -> 'Tensor':
+    def copy(self) -> "Tensor":
         if self._backend == "numpy":
             return Tensor(self._data.copy(), device=self.device, requires_grad=self.requires_grad)
         else:
@@ -102,35 +105,35 @@ class Tensor:
 
     # --- Math operations with forward & adjoint support ---
 
-    def __add__(self, other: Union['Tensor', float, int]) -> 'Tensor':
+    def __add__(self, other: Union["Tensor", float, int]) -> "Tensor":
         other_data = other.data if isinstance(other, Tensor) else other
         return Tensor(self._data + other_data, device=self.device)
 
-    def __radd__(self, other: Union['Tensor', float, int]) -> 'Tensor':
+    def __radd__(self, other: Union["Tensor", float, int]) -> "Tensor":
         return self.__add__(other)
 
-    def __sub__(self, other: Union['Tensor', float, int]) -> 'Tensor':
+    def __sub__(self, other: Union["Tensor", float, int]) -> "Tensor":
         other_data = other.data if isinstance(other, Tensor) else other
         return Tensor(self._data - other_data, device=self.device)
 
-    def __mul__(self, other: Union['Tensor', float, int]) -> 'Tensor':
+    def __mul__(self, other: Union["Tensor", float, int]) -> "Tensor":
         other_data = other.data if isinstance(other, Tensor) else other
         return Tensor(self._data * other_data, device=self.device)
 
-    def __rmul__(self, other: Union['Tensor', float, int]) -> 'Tensor':
+    def __rmul__(self, other: Union["Tensor", float, int]) -> "Tensor":
         return self.__mul__(other)
 
-    def __matmul__(self, other: 'Tensor') -> 'Tensor':
+    def __matmul__(self, other: "Tensor") -> "Tensor":
         return Tensor(self._data @ other.data, device=self.device)
 
-    def __truediv__(self, other: Union['Tensor', float, int]) -> 'Tensor':
+    def __truediv__(self, other: Union["Tensor", float, int]) -> "Tensor":
         other_data = other.data if isinstance(other, Tensor) else other
         return Tensor(self._data / other_data, device=self.device)
 
-    def __neg__(self) -> 'Tensor':
+    def __neg__(self) -> "Tensor":
         return Tensor(-self._data, device=self.device)
 
-    def transpose(self, *axes: int) -> 'Tensor':
+    def transpose(self, *axes: int) -> "Tensor":
         if self._backend == "numpy":
             return Tensor(np.transpose(self._data, axes if axes else None), device=self.device)
         else:
@@ -139,10 +142,10 @@ class Tensor:
             return Tensor(self._data.permute(*axes), device=self.device)
 
     @property
-    def T(self) -> 'Tensor':
+    def T(self) -> "Tensor":
         return self.transpose()
 
-    def reshape(self, *shape: int) -> 'Tensor':
+    def reshape(self, *shape: int) -> "Tensor":
         if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
             shape = tuple(shape[0])
         if self._backend == "numpy":
@@ -150,7 +153,7 @@ class Tensor:
         else:
             return Tensor(self._data.reshape(*shape), device=self.device)
 
-    def sum(self, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> 'Tensor':
+    def sum(self, axis: Union[int, tuple[int, ...]] | None = None, keepdims: bool = False) -> "Tensor":
         if self._backend == "numpy":
             return Tensor(np.sum(self._data, axis=axis, keepdims=keepdims), device=self.device)
         else:
@@ -158,7 +161,7 @@ class Tensor:
                 return Tensor(self._data.sum(), device=self.device)
             return Tensor(self._data.sum(dim=axis, keepdim=keepdims), device=self.device)
 
-    def mean(self, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> 'Tensor':
+    def mean(self, axis: Union[int, tuple[int, ...]] | None = None, keepdims: bool = False) -> "Tensor":
         if self._backend == "numpy":
             return Tensor(np.mean(self._data, axis=axis, keepdims=keepdims), device=self.device)
         else:
@@ -166,10 +169,10 @@ class Tensor:
                 return Tensor(self._data.mean(), device=self.device)
             return Tensor(self._data.mean(dim=axis, keepdim=keepdims), device=self.device)
 
-    def __getitem__(self, item: Any) -> 'Tensor':
+    def __getitem__(self, item: Any) -> "Tensor":
         return Tensor(self._data[item], device=self.device)
 
-    def __setitem__(self, key: Any, value: Union['Tensor', float, int]) -> None:
+    def __setitem__(self, key: Any, value: Union["Tensor", float, int]) -> None:
         val = value.data if isinstance(value, Tensor) else value
         self._data[key] = val
 
@@ -183,14 +186,16 @@ class Tensor:
         return f"Tensor(shape={self.shape}, device='{self.device}', dtype={self.dtype})"
 
 
-def zeros(shape: Tuple[int, ...], dtype: Any = np.float32, device: str = "cpu") -> Tensor:
+def zeros(shape: tuple[int, ...], dtype: Any = np.float32, device: str = "cpu") -> Tensor:
     return Tensor(np.zeros(shape, dtype=dtype), device=device)
 
 
-def ones(shape: Tuple[int, ...], dtype: Any = np.float32, device: str = "cpu") -> Tensor:
+def ones(shape: tuple[int, ...], dtype: Any = np.float32, device: str = "cpu") -> Tensor:
     return Tensor(np.ones(shape, dtype=dtype), device=device)
 
 
-def randn(shape: Tuple[int, ...], mean: float = 0.0, std: float = 1.0, dtype: Any = np.float32, device: str = "cpu") -> Tensor:
+def randn(
+    shape: tuple[int, ...], mean: float = 0.0, std: float = 1.0, dtype: Any = np.float32, device: str = "cpu"
+) -> Tensor:
     data = np.random.normal(mean, std, size=shape).astype(dtype)
     return Tensor(data, device=device)

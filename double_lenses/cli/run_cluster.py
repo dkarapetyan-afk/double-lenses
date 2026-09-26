@@ -5,17 +5,17 @@ staged across heterogeneous GPUs and CPUs.
 """
 
 import argparse
-import sys
 import time
+
 import numpy as np
 
 from double_lenses.autodiff.loss import CrossEntropyLossLens
-from double_lenses.models.config import MixtralConfig, DeepSeekConfig
-from double_lenses.models.mixtral import MixtralModelLens
-from double_lenses.models.deepseek import DeepSeekModelLens
-from double_lenses.cluster.topology import ClusterTopology, DeviceAddress
-from double_lenses.cluster.fabric import CommunicationFabric
 from double_lenses.cluster.engine import DistributedLensRuntime
+from double_lenses.cluster.fabric import CommunicationFabric
+from double_lenses.cluster.topology import ClusterTopology
+from double_lenses.models.config import DeepSeekConfig, MixtralConfig
+from double_lenses.models.deepseek import DeepSeekModelLens
+from double_lenses.models.mixtral import MixtralModelLens
 
 
 def run_mixtral_demo(runtime: DistributedLensRuntime, steps: int = 3) -> None:
@@ -24,7 +24,9 @@ def run_mixtral_demo(runtime: DistributedLensRuntime, steps: int = 3) -> None:
     print("=" * 70)
 
     config = MixtralConfig.mixtral_mini()
-    print(f"[*] Configuration: dim={config.dim}, layers={config.n_layers}, heads={config.n_heads}, kv_heads={config.n_kv_heads}")
+    print(
+        f"[*] Configuration: dim={config.dim}, layers={config.n_layers}, heads={config.n_heads}, kv_heads={config.n_kv_heads}"
+    )
     print(f"[*] MoE Structure: {config.num_experts} SwiGLU Experts, Top-{config.top_k} Routing per token")
 
     print("[*] Instantiating Mixtral categorical lens network...")
@@ -39,7 +41,9 @@ def run_mixtral_demo(runtime: DistributedLensRuntime, steps: int = 3) -> None:
 
     batch_size = 2
     seq_len = 8
-    print(f"[*] Running {steps} distributed forward & adjoint training steps (batch={batch_size}, seq_len={seq_len})...\n")
+    print(
+        f"[*] Running {steps} distributed forward & adjoint training steps (batch={batch_size}, seq_len={seq_len})...\n"
+    )
 
     for step in range(1, steps + 1):
         tokens = np.random.randint(0, config.vocab_size, size=(batch_size, seq_len))
@@ -51,7 +55,11 @@ def run_mixtral_demo(runtime: DistributedLensRuntime, steps: int = 3) -> None:
 
         # Verify gradient existence on key parameters
         lm_head_grad_norm = np.linalg.norm(model.lm_head.w.grad.to_numpy()) if model.lm_head.w.grad is not None else 0.0
-        router_grad_norm = np.linalg.norm(model.layers[0].moe.router.w_gate.w.grad.to_numpy()) if model.layers[0].moe.router.w_gate.w.grad is not None else 0.0
+        router_grad_norm = (
+            np.linalg.norm(model.layers[0].moe.router.w_gate.w.grad.to_numpy())
+            if model.layers[0].moe.router.w_gate.w.grad is not None
+            else 0.0
+        )
 
         print(f"  [Step {step}/{steps}] Loss: {loss:.4f} | Time: {t_step:.2f} ms")
         print(f"               LM Head ||∇W||: {lm_head_grad_norm:.6f} | Router ||∇W||: {router_grad_norm:.6f}")
@@ -65,7 +73,9 @@ def run_deepseek_demo(runtime: DistributedLensRuntime, steps: int = 3) -> None:
     config = DeepSeekConfig.deepseek_mini()
     print(f"[*] Configuration: dim={config.dim}, layers={config.n_layers}, MLA heads={config.n_heads}")
     print(f"[*] MLA Low-Rank KV Rank: {config.kv_lora_rank}, Decoupled RoPE Dim: {config.qk_rope_head_dim}")
-    print(f"[*] DeepSeekMoE: {config.num_shared_experts} Shared Experts + {config.num_routed_experts} Routed Experts, Top-{config.top_k}")
+    print(
+        f"[*] DeepSeekMoE: {config.num_shared_experts} Shared Experts + {config.num_routed_experts} Routed Experts, Top-{config.top_k}"
+    )
 
     print("[*] Instantiating DeepSeek categorical lens network...")
     model = DeepSeekModelLens("deepseek", config)
@@ -79,7 +89,9 @@ def run_deepseek_demo(runtime: DistributedLensRuntime, steps: int = 3) -> None:
 
     batch_size = 2
     seq_len = 8
-    print(f"[*] Running {steps} distributed forward & adjoint training steps (batch={batch_size}, seq_len={seq_len})...\n")
+    print(
+        f"[*] Running {steps} distributed forward & adjoint training steps (batch={batch_size}, seq_len={seq_len})...\n"
+    )
 
     for step in range(1, steps + 1):
         tokens = np.random.randint(0, config.vocab_size, size=(batch_size, seq_len))
@@ -90,7 +102,11 @@ def run_deepseek_demo(runtime: DistributedLensRuntime, steps: int = 3) -> None:
         t_step = (time.perf_counter() - t0) * 1000.0
 
         lm_head_grad_norm = np.linalg.norm(model.lm_head.w.grad.to_numpy()) if model.lm_head.w.grad is not None else 0.0
-        shared_exp_norm = np.linalg.norm(model.layers[0].moe.shared_experts[0].swiglu.w_gate.w.grad.to_numpy()) if model.layers[0].moe.shared_experts[0].swiglu.w_gate.w.grad is not None else 0.0
+        shared_exp_norm = (
+            np.linalg.norm(model.layers[0].moe.shared_experts[0].swiglu.w_gate.w.grad.to_numpy())
+            if model.layers[0].moe.shared_experts[0].swiglu.w_gate.w.grad is not None
+            else 0.0
+        )
 
         print(f"  [Step {step}/{steps}] Loss: {loss:.4f} | Time: {t_step:.2f} ms")
         print(f"               LM Head ||∇W||: {lm_head_grad_norm:.6f} | Shared Exp ||∇W||: {shared_exp_norm:.6f}")
@@ -98,7 +114,9 @@ def run_deepseek_demo(runtime: DistributedLensRuntime, steps: int = 3) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Distributed Double Lens Neural Network Runtime")
-    parser.add_argument("--model", type=str, choices=["mixtral", "deepseek", "both"], default="both", help="Model to run")
+    parser.add_argument(
+        "--model", type=str, choices=["mixtral", "deepseek", "both"], default="both", help="Model to run"
+    )
     parser.add_argument("--num-gpus", type=int, default=1, help="Number of simulated/CUDA GPUs")
     parser.add_argument("--num-cpus", type=int, default=2, help="Number of CPU worker nodes")
     parser.add_argument("--steps", type=int, default=3, help="Number of forward/adjoint steps to execute")

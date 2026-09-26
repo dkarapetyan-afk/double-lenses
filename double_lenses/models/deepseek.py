@@ -3,14 +3,16 @@ Full DeepSeek Transformer Block and End-to-End Language Model Lens.
 Features Multi-Head Latent Attention (MLA) and DeepSeekMoE.
 """
 
-from typing import List, Optional, Tuple, Union
+from typing import Union
+
 import numpy as np
-from double_lenses.autodiff.tensor import Tensor
+
+from double_lenses.autodiff.layers import EmbeddingLens, LinearLens, RMSNormLens
 from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
-from double_lenses.autodiff.layers import RMSNormLens, LinearLens, EmbeddingLens
+from double_lenses.autodiff.tensor import Tensor
 from double_lenses.models.attention.mla import MultiHeadLatentAttentionLens
-from double_lenses.models.moe.deepseek_moe import DeepSeekMoELens
 from double_lenses.models.config import DeepSeekConfig
+from double_lenses.models.moe.deepseek_moe import DeepSeekMoELens
 
 
 class DeepSeekTransformerBlockLens(ParameterizedLens):
@@ -19,6 +21,7 @@ class DeepSeekTransformerBlockLens(ParameterizedLens):
       h = x + MLA(RMSNorm_1(x))
       out = h + DeepSeekMoE(RMSNorm_2(h))
     """
+
     def __init__(self, name: str, config: DeepSeekConfig):
         super().__init__(name=name)
         self.config = config
@@ -72,12 +75,13 @@ class DeepSeekModelLens(ParameterizedLens):
     Complete DeepSeek Language Model Lens:
       tokens -> Embedding -> N x TransformerBlocks -> Final RMSNorm -> LM Head -> Logits
     """
+
     def __init__(self, name: str, config: DeepSeekConfig):
         super().__init__(name=name)
         self.config = config
 
         self.tok_embeddings = EmbeddingLens(f"{name}.tok_embeddings", config.vocab_size, config.dim)
-        self.layers: List[DeepSeekTransformerBlockLens] = []
+        self.layers: list[DeepSeekTransformerBlockLens] = []
         for i in range(config.n_layers):
             layer = DeepSeekTransformerBlockLens(f"{name}.layer_{i}", config=config)
             self.layers.append(layer)
@@ -118,7 +122,7 @@ class DeepSeekModelLens(ParameterizedLens):
         ctx_embed = ctx.sub_contexts[0]
         ctx_norm = ctx.sub_contexts[1]
         ctx_lm = ctx.sub_contexts[2]
-        layer_contexts = ctx.sub_contexts[3:3 + len(self.layers)]
+        layer_contexts = ctx.sub_contexts[3 : 3 + len(self.layers)]
 
         # 1. Pullback through LM head
         grad_norm_h = self.lm_head.adjoint(ctx_lm, grad_logits)

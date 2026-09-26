@@ -4,10 +4,12 @@ Each layer implements both forward functorial evaluation and
 exact adjoint cotangent lifting.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Union
+
 import numpy as np
-from double_lenses.autodiff.tensor import Tensor, randn, zeros, ones
+
 from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
+from double_lenses.autodiff.tensor import Tensor, ones, randn, zeros
 
 
 class LinearLens(ParameterizedLens):
@@ -19,6 +21,7 @@ class LinearLens(ParameterizedLens):
       ∇W = ȳ^T x (aggregated across batch & sequence dimensions)
       ∇b = Σ ȳ
     """
+
     def __init__(self, name: str, in_features: int, out_features: int, bias: bool = False):
         super().__init__(name=name)
         self.in_features = in_features
@@ -74,6 +77,7 @@ class RMSNormLens(ParameterizedLens):
       y = (x / rms(x)) * gamma
       where rms(x) = sqrt(mean(x^2, axis=-1, keepdims=True) + eps)
     """
+
     def __init__(self, name: str, dim: int, eps: float = 1e-6):
         super().__init__(name=name)
         self.dim = dim
@@ -82,7 +86,7 @@ class RMSNormLens(ParameterizedLens):
 
     def forward(self, ctx: LensContext, x: Tensor) -> Tensor:
         x_np = x.to_numpy()
-        var = np.mean(x_np ** 2, axis=-1, keepdims=True)
+        var = np.mean(x_np**2, axis=-1, keepdims=True)
         rms = np.sqrt(var + self.eps)
         x_norm = x_np / rms
         y_np = x_norm * self.weight.to_numpy()
@@ -94,7 +98,7 @@ class RMSNormLens(ParameterizedLens):
         return Tensor(y_np, device=x.device)
 
     def adjoint(self, ctx: LensContext, grad_y: Tensor) -> Tensor:
-        x_np = ctx.get("input_np")
+        ctx.get("input_np")  # consumed for completeness
         rms = ctx.get("rms")
         x_norm = ctx.get("x_norm")
         w_np = self.weight.to_numpy()
@@ -120,6 +124,7 @@ class SiLULens(ParameterizedLens):
     """
     SiLU (Swish) Activation: silu(x) = x * sigmoid(x).
     """
+
     def __init__(self, name: str = "silu"):
         super().__init__(name=name)
 
@@ -147,7 +152,8 @@ class SwiGLULens(ParameterizedLens):
     SwiGLU feed-forward network block:
       SwiGLU(x) = (silu(x W_gate^T) * (x W_up^T)) W_down^T
     """
-    def __init__(self, name: str, in_dim: int, hidden_dim: int, out_dim: Optional[int] = None):
+
+    def __init__(self, name: str, in_dim: int, hidden_dim: int, out_dim: int | None = None):
         super().__init__(name=name)
         out_dim = out_dim or in_dim
         self.w_gate = LinearLens(f"{name}.w_gate", in_dim, hidden_dim, bias=False)
@@ -208,6 +214,7 @@ class SoftmaxLens(ParameterizedLens):
     """
     Numerically stable Softmax layer along specified axis with exact vector-Jacobian adjoint.
     """
+
     def __init__(self, name: str = "softmax", axis: int = -1):
         super().__init__(name=name)
         self.axis = axis
@@ -236,6 +243,7 @@ class RoPELens(ParameterizedLens):
     Applies 2D rotation to pairs of features according to token position.
     Adjoint is exact orthogonal transpose (rotation by -θ).
     """
+
     def __init__(self, name: str, head_dim: int, max_seq_len: int = 4096, theta: float = 10000.0):
         super().__init__(name=name)
         self.head_dim = head_dim
@@ -258,8 +266,8 @@ class RoPELens(ParameterizedLens):
         orig_shape = x_np.shape
         seq_len = orig_shape[1]
 
-        cos_t = self.cos[start_pos:start_pos + seq_len]
-        sin_t = self.sin[start_pos:start_pos + seq_len]
+        cos_t = self.cos[start_pos : start_pos + seq_len]
+        sin_t = self.sin[start_pos : start_pos + seq_len]
 
         # Reshape to pair consecutive dimensions
         # Split into x1 (even) and x2 (odd)
@@ -314,6 +322,7 @@ class EmbeddingLens(ParameterizedLens):
     Forward: Maps integer token IDs to continuous vectors.
     Adjoint: Accumulates cotangents into the embedding matrix.
     """
+
     def __init__(self, name: str, vocab_size: int, embed_dim: int):
         super().__init__(name=name)
         self.vocab_size = vocab_size

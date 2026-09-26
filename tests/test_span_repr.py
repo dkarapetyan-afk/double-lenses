@@ -3,14 +3,12 @@ Unit tests for Span Representation, Tabulators, Conjoints and Companions.
 Based on Bryce Clarke (2022), Chapter 2, Section 2.4 and Chapter 3, Section 3.4.
 """
 
-from double_lenses.category.base import Category, Functor, identity_functor
-from double_lenses.category.cofunctor import Cofunctor
+from double_lenses.category.base import Category, identity_functor
 from double_lenses.category.lens import DeltaLens
 from double_lenses.category.span_repr import (
-    tabulator_of_cofunctor,
-    span_representation_of_lens,
     companion_of_functor,
     conjoint_of_functor,
+    span_representation_of_lens,
 )
 
 

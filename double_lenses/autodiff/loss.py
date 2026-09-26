@@ -3,10 +3,12 @@ Categorical Loss Lenses with Exact Cotangent Pullback Generation.
 Provides terminal lenses for computing scalar loss and backward seed cotangents.
 """
 
-from typing import Any, Tuple, Union
+from typing import Union
+
 import numpy as np
-from double_lenses.autodiff.tensor import Tensor
+
 from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
+from double_lenses.autodiff.tensor import Tensor
 
 
 class CrossEntropyLossLens(ParameterizedLens):
@@ -16,6 +18,7 @@ class CrossEntropyLossLens(ParameterizedLens):
     Adjoint: Generates initial seed cotangent:
       ȳ = (softmax(logits) - one_hot(targets)) / N
     """
+
     def __init__(self, name: str = "cross_entropy"):
         super().__init__(name=name)
 
@@ -62,6 +65,7 @@ class CrossEntropyLossLens(ParameterizedLens):
 
 class MSELossLens(ParameterizedLens):
     """Mean Squared Error Loss."""
+
     def __init__(self, name: str = "mse"):
         super().__init__(name=name)
 
@@ -69,7 +73,7 @@ class MSELossLens(ParameterizedLens):
         p_np = pred.to_numpy()
         t_np = target.to_numpy()
         diff = p_np - t_np
-        loss_val = np.mean(diff ** 2)
+        loss_val = np.mean(diff**2)
         ctx.save("diff", diff)
         ctx.save("size", p_np.size)
         return Tensor(np.array(loss_val, dtype=np.float32), device=pred.device)

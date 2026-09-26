@@ -8,11 +8,11 @@ __version__ = "0.1.0"
 
 from double_lenses.category import (
     Category,
-    Functor,
     Cofunctor,
     DeltaLens,
     DoubleCategory,
     DoubleCell,
+    Functor,
     RightConnectedCompletion,
 )
 

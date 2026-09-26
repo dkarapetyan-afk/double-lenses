@@ -10,12 +10,11 @@ Based on Bryce Clarke (2022).
 
 from double_lenses.category.base import Category, Functor, identity_functor
 from double_lenses.category.cofunctor import Cofunctor, identity_cofunctor
-from double_lenses.category.lens import DeltaLens, identity_lens
 from double_lenses.category.double_category import (
     DoubleCategory,
-    DoubleCategoryCof,
     DoubleCell,
 )
+from double_lenses.category.lens import DeltaLens, identity_lens
 
 
 def create_sample_categories():
@@ -127,7 +126,7 @@ def test_lens_vertical_composition():
 
     # Identity lenses
     id_a = identity_lens(cat_a)
-    id_b = identity_lens(cat_b)
+    _id_b = identity_lens(cat_b)
 
     fwd = Functor(
         name="F",
@@ -136,7 +135,11 @@ def test_lens_vertical_composition():
         on_objects=lambda a: "b0" if a in ("a0", "a1") else "b1",
         on_morphisms=lambda m: "id_b0" if m in ("id_a0", "id_a1", "f01") else ("u" if m in ("f12", "f02") else "id_b1"),
     )
-    lens = DeltaLens(name="Lens_AB", forward_functor=fwd, lift_fn=lambda a, u: "f02" if (a, u) == ("a0", "u") else ("f12" if (a, u) == ("a1", "u") else f"id_{a}"))
+    lens = DeltaLens(
+        name="Lens_AB",
+        forward_functor=fwd,
+        lift_fn=lambda a, u: "f02" if (a, u) == ("a0", "u") else ("f12" if (a, u) == ("a1", "u") else f"id_{a}"),
+    )
 
     # Compose with identity: lens ∘ id_a == lens
     comp = lens.compose(id_a)

@@ -4,41 +4,43 @@ Discrete Opfibrations, and Bijective-on-Objects Functors.
 Based on Bryce Clarke (2022), Chapter 2 and Appendix A.
 """
 
-from typing import Any, Callable, Dict, Generic, Iterable, List, Optional, Set, Tuple, TypeVar
+from collections.abc import Callable, Iterable
+from typing import Any, Generic, TypeVar
 
-O = TypeVar('O')  # Object type
-M = TypeVar('M')  # Morphism type
+Ob = TypeVar("Ob")  # Object type
+M = TypeVar("M")  # Morphism type
 
 
-class Category(Generic[O, M]):
+class Category(Generic[Ob, M]):
     """
     A small category consisting of objects and morphisms with identities and composition.
     """
+
     def __init__(
         self,
         name: str,
-        objects: Iterable[O],
+        objects: Iterable[Ob],
         morphisms: Iterable[M],
-        dom_fn: Callable[[M], O],
-        cod_fn: Callable[[M], O],
-        id_fn: Callable[[O], M],
+        dom_fn: Callable[[M], Ob],
+        cod_fn: Callable[[M], Ob],
+        id_fn: Callable[[Ob], M],
         compose_fn: Callable[[M, M], M],  # compose(g, f) = g ∘ f
     ):
         self.name = name
-        self.objects: Set[O] = set(objects)
-        self.morphisms: Set[M] = set(morphisms)
+        self.objects: set[Ob] = set(objects)
+        self.morphisms: set[M] = set(morphisms)
         self._dom_fn = dom_fn
         self._cod_fn = cod_fn
         self._id_fn = id_fn
         self._compose_fn = compose_fn
 
-    def dom(self, m: M) -> O:
+    def dom(self, m: M) -> Ob:
         return self._dom_fn(m)
 
-    def cod(self, m: M) -> O:
+    def cod(self, m: M) -> Ob:
         return self._cod_fn(m)
 
-    def identity(self, o: O) -> M:
+    def identity(self, o: Ob) -> M:
         if o not in self.objects:
             raise ValueError(f"Object {o} is not in category {self.name}")
         return self._id_fn(o)
@@ -46,12 +48,10 @@ class Category(Generic[O, M]):
     def compose(self, g: M, f: M) -> M:
         """Computes g ∘ f (first f, then g). Requires dom(g) == cod(f)."""
         if self.dom(g) != self.cod(f):
-            raise ValueError(
-                f"Cannot compose {g} (dom={self.dom(g)}) and {f} (cod={self.cod(f)}) in {self.name}"
-            )
+            raise ValueError(f"Cannot compose {g} (dom={self.dom(g)}) and {f} (cod={self.cod(f)}) in {self.name}")
         return self._compose_fn(g, f)
 
-    def hom(self, a: O, b: O) -> List[M]:
+    def hom(self, a: Ob, b: Ob) -> list[M]:
         """Returns all morphisms from a to b."""
         return [m for m in self.morphisms if self.dom(m) == a and self.cod(m) == b]
 
@@ -87,6 +87,7 @@ class Functor:
     """
     A functor F: A -> B between categories A and B.
     """
+
     def __init__(
         self,
         name: str,
@@ -112,7 +113,7 @@ class Functor:
             return self.on_object(x)
         return self.on_morphism(x)
 
-    def compose(self, other: 'Functor') -> 'Functor':
+    def compose(self, other: "Functor") -> "Functor":
         """Returns self ∘ other (first other, then self)."""
         if self.source != other.target:
             raise ValueError(f"Cannot compose functor {self.name} with {other.name}: target mismatch")

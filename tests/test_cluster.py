@@ -8,22 +8,21 @@ Distributed Cluster Staging Tests:
 """
 
 import numpy as np
-from double_lenses.autodiff.tensor import Tensor, randn
-from double_lenses.autodiff.param_lens import LensContext
+
 from double_lenses.autodiff.loss import CrossEntropyLossLens
-from double_lenses.models.config import MixtralConfig, DeepSeekConfig
-from double_lenses.models.mixtral import MixtralModelLens
-from double_lenses.models.deepseek import DeepSeekModelLens
-from double_lenses.cluster.topology import ClusterTopology, DeviceAddress
-from double_lenses.cluster.fabric import Serializer, CommunicationFabric
+from double_lenses.autodiff.param_lens import LensContext
+from double_lenses.autodiff.tensor import randn
 from double_lenses.cluster.collectives import (
-    AllReduceFunctor,
     AllGatherFunctor,
-    ScatterFunctor,
-    GatherFunctor,
+    AllReduceFunctor,
 )
-from double_lenses.cluster.sharding import TensorParallel2Cell, ExpertParallel2Cell
 from double_lenses.cluster.engine import DistributedLensRuntime
+from double_lenses.cluster.fabric import CommunicationFabric, Serializer
+from double_lenses.cluster.sharding import ExpertParallel2Cell, TensorParallel2Cell
+from double_lenses.cluster.topology import ClusterTopology
+from double_lenses.models.config import DeepSeekConfig, MixtralConfig
+from double_lenses.models.deepseek import DeepSeekModelLens
+from double_lenses.models.mixtral import MixtralModelLens
 
 
 def test_tensor_serialization():

@@ -4,16 +4,16 @@ Verifies that the cofunctorial adjoint lifting computes exact derivatives.
 """
 
 import numpy as np
-from double_lenses.autodiff.tensor import Tensor, randn
-from double_lenses.autodiff.param_lens import LensContext
+
 from double_lenses.autodiff.layers import (
     LinearLens,
     RMSNormLens,
+    RoPELens,
     SiLULens,
     SwiGLULens,
-    SoftmaxLens,
-    RoPELens,
 )
+from double_lenses.autodiff.param_lens import LensContext
+from double_lenses.autodiff.tensor import randn
 
 
 def compute_numerical_gradient(func, param_tensor, eps=1e-3):
@@ -21,7 +21,7 @@ def compute_numerical_gradient(func, param_tensor, eps=1e-3):
     orig_data = param_tensor.to_numpy().copy()
     grad_num = np.zeros_like(orig_data)
 
-    it = np.nditer(orig_data, flags=['multi_index'], op_flags=['readwrite'])
+    it = np.nditer(orig_data, flags=["multi_index"], op_flags=["readwrite"])
     while not it.finished:
         idx = it.multi_index
         val = orig_data[idx]
@@ -52,8 +52,8 @@ def test_linear_lens_adjoint():
     dy = randn((2, 3))
 
     ctx = LensContext()
-    y = lens.forward(ctx, x)
-    dx = lens.adjoint(ctx, dy)
+    _y = lens.forward(ctx, x)  # side-effect: populates ctx
+    _dx = lens.adjoint(ctx, dy)  # side-effect: accumulates gradients
 
     # Check gradient w.r.t W
     def loss_fn():
@@ -73,8 +73,8 @@ def test_rmsnorm_lens_adjoint():
     dy = randn((2, 4))
 
     ctx = LensContext()
-    y = lens.forward(ctx, x)
-    dx = lens.adjoint(ctx, dy)
+    _y = lens.forward(ctx, x)  # side-effect: populates ctx
+    _dx = lens.adjoint(ctx, dy)  # side-effect: accumulates gradients
 
     # Check gradient w.r.t gamma (weight)
     def loss_fn():
@@ -94,7 +94,7 @@ def test_silu_lens_adjoint():
     dy = randn((2, 4))
 
     ctx = LensContext()
-    y = lens.forward(ctx, x)
+    _y = lens.forward(ctx, x)  # side-effect: populates ctx
     dx = lens.adjoint(ctx, dy)
 
     # Analytical silu'(x) = sig * (1 + x * (1 - sig))
@@ -111,8 +111,8 @@ def test_swiglu_lens_adjoint():
     dy = randn((2, 4))
 
     ctx = LensContext()
-    y = lens.forward(ctx, x)
-    dx = lens.adjoint(ctx, dy)
+    _y = lens.forward(ctx, x)  # side-effect: populates ctx
+    _dx = lens.adjoint(ctx, dy)  # side-effect: accumulates gradients
 
     def loss_fn():
         ctx_temp = LensContext()

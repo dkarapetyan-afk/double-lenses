@@ -3,11 +3,11 @@ Grouped-Query Attention (GQA) Lens for Mixtral.
 Composed entirely of categorical lenses with exact forward and adjoint passes.
 """
 
-from typing import Optional, Tuple
 import numpy as np
-from double_lenses.autodiff.tensor import Tensor, randn, zeros
-from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
+
 from double_lenses.autodiff.layers import LinearLens, RoPELens, SoftmaxLens
+from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
+from double_lenses.autodiff.tensor import Tensor
 from double_lenses.models.config import MixtralConfig
 
 
@@ -17,6 +17,7 @@ class GroupedQueryAttentionLens(ParameterizedLens):
     Combines Q, K, V projections, RoPE, head repetition,
     scaled dot-product attention, and output projection.
     """
+
     def __init__(self, name: str, config: MixtralConfig):
         super().__init__(name=name)
         self.config = config
@@ -116,7 +117,11 @@ class GroupedQueryAttentionLens(ParameterizedLens):
 
         # 1. Pullback through out_proj
         grad_context_trans = self.out_proj.adjoint(ctx_out, grad_y)
-        grad_context = grad_context_trans.to_numpy().reshape(batch_size, seq_len, self.n_heads, self.head_dim).transpose(0, 2, 1, 3)
+        grad_context = (
+            grad_context_trans.to_numpy()
+            .reshape(batch_size, seq_len, self.n_heads, self.head_dim)
+            .transpose(0, 2, 1, 3)
+        )
 
         # 2. Pullback through context = attn_weights @ v_np
         # grad_v_np = attn_weights^T @ grad_context

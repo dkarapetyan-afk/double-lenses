@@ -3,18 +3,20 @@ Distributed Lens Runtime Engine.
 Coordinates multi-device and multi-node execution for forward and adjoint passes.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
 import time
+from typing import Any, Union
+
 import numpy as np
-from double_lenses.autodiff.tensor import Tensor
-from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
+
 from double_lenses.autodiff.loss import CrossEntropyLossLens
-from double_lenses.models.mixtral import MixtralModelLens
-from double_lenses.models.deepseek import DeepSeekModelLens
-from double_lenses.cluster.topology import ClusterTopology, DeviceAddress
+from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
+from double_lenses.autodiff.tensor import Tensor
 from double_lenses.cluster.fabric import CommunicationFabric
-from double_lenses.cluster.sharding import ExpertParallel2Cell
 from double_lenses.cluster.offloading import MemoryStager
+from double_lenses.cluster.sharding import ExpertParallel2Cell
+from double_lenses.cluster.topology import ClusterTopology, DeviceAddress
+from double_lenses.models.deepseek import DeepSeekModelLens
+from double_lenses.models.mixtral import MixtralModelLens
 
 
 class DistributedLensRuntime:
@@ -24,13 +26,14 @@ class DistributedLensRuntime:
       - Partitions and stages models across heterogeneous GPUs and CPUs
       - Executes coordinated forward and adjoint passes
     """
-    def __init__(self, topology: ClusterTopology, fabric: Optional[CommunicationFabric] = None):
+
+    def __init__(self, topology: ClusterTopology, fabric: CommunicationFabric | None = None):
         self.topology = topology
         self.fabric = fabric or CommunicationFabric(topology)
         self.ingress_device = topology.all_devices()[0]
-        self.expert_cells: Dict[str, ExpertParallel2Cell] = {}
-        self.memory_stagers: Dict[str, MemoryStager] = {}
-        self.stats: Dict[str, Any] = {
+        self.expert_cells: dict[str, ExpertParallel2Cell] = {}
+        self.memory_stagers: dict[str, MemoryStager] = {}
+        self.stats: dict[str, Any] = {
             "forward_passes": 0,
             "adjoint_passes": 0,
             "forward_time_ms": 0.0,
@@ -60,7 +63,7 @@ class DistributedLensRuntime:
             num_experts = moe.num_experts
 
             # Allocate experts round-robin or GPU-prioritized
-            placements: Dict[int, DeviceAddress] = {}
+            placements: dict[int, DeviceAddress] = {}
             for e_id in range(num_experts):
                 dev = all_devs[e_id % num_devs]
                 placements[e_id] = dev
@@ -94,7 +97,7 @@ class DistributedLensRuntime:
             moe = layer.moe
             num_routed = moe.num_routed
 
-            placements: Dict[int, DeviceAddress] = {}
+            placements: dict[int, DeviceAddress] = {}
             for e_id in range(num_routed):
                 dev = all_devs[e_id % num_devs]
                 placements[e_id] = dev
@@ -145,7 +148,7 @@ class DistributedLensRuntime:
         loss_lens: CrossEntropyLossLens,
         tokens: Union[Tensor, np.ndarray],
         targets: Union[Tensor, np.ndarray],
-    ) -> Tuple[float, Dict[str, Any]]:
+    ) -> tuple[float, dict[str, Any]]:
         """
         Executes a complete forward + adjoint training/inference step:
           1. Forward pass through model lens

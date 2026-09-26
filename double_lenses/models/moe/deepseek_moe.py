@@ -3,13 +3,13 @@ DeepSeekMoE Lens Architecture: Fine-Grained Routed Experts + Isolated Shared Exp
 Implements exact forward and analytical adjoint lifting.
 """
 
-from typing import Dict, List, Optional, Tuple
 import numpy as np
-from double_lenses.autodiff.tensor import Tensor, zeros
+
 from double_lenses.autodiff.param_lens import LensContext, ParameterizedLens
-from double_lenses.models.moe.router import MoERouterLens
-from double_lenses.models.moe.expert import ExpertLens
+from double_lenses.autodiff.tensor import Tensor
 from double_lenses.models.config import DeepSeekConfig
+from double_lenses.models.moe.expert import ExpertLens
+from double_lenses.models.moe.router import MoERouterLens
 
 
 class DeepSeekMoELens(ParameterizedLens):
@@ -19,6 +19,7 @@ class DeepSeekMoELens(ParameterizedLens):
       - Routed Experts: N fine-grained routed experts, top-k routed per token.
       - Output: y = Σ shared_m(x) + Σ w_k * routed_k(x).
     """
+
     def __init__(self, name: str, config: DeepSeekConfig):
         super().__init__(name=name)
         self.config = config
@@ -41,7 +42,7 @@ class DeepSeekMoELens(ParameterizedLens):
             self.parameters[f"router.{k}"] = v
 
         # Shared Experts
-        self.shared_experts: List[ExpertLens] = []
+        self.shared_experts: list[ExpertLens] = []
         for i in range(self.num_shared):
             exp = ExpertLens(
                 name=f"{name}.shared_{i}",
@@ -55,7 +56,7 @@ class DeepSeekMoELens(ParameterizedLens):
                 self.parameters[f"shared_{i}.{k}"] = v
 
         # Routed Experts
-        self.routed_experts: List[ExpertLens] = []
+        self.routed_experts: list[ExpertLens] = []
         for i in range(self.num_routed):
             exp = ExpertLens(
                 name=f"{name}.routed_{i}",
@@ -82,8 +83,8 @@ class DeepSeekMoELens(ParameterizedLens):
 
         # 1. Run Shared Experts (executed on ALL tokens)
         shared_out = np.zeros_like(flat_x)
-        shared_contexts: List[LensContext] = []
-        for i, s_exp in enumerate(self.shared_experts):
+        shared_contexts: list[LensContext] = []
+        for _i, s_exp in enumerate(self.shared_experts):
             s_ctx = ctx.create_sub_context()
             shared_contexts.append(s_ctx)
             s_res = s_exp.forward(s_ctx, Tensor(flat_x, device=x.device)).to_numpy()
@@ -91,10 +92,10 @@ class DeepSeekMoELens(ParameterizedLens):
 
         # 2. Run Routed Experts (executed on gathered tokens)
         routed_out = np.zeros_like(flat_x)
-        expert_contexts: Dict[int, LensContext] = {}
-        expert_token_indices: Dict[int, List[int]] = {i: [] for i in range(self.num_routed)}
-        expert_k_slots: Dict[int, List[int]] = {i: [] for i in range(self.num_routed)}
-        expert_outputs: Dict[int, np.ndarray] = {}
+        expert_contexts: dict[int, LensContext] = {}
+        expert_token_indices: dict[int, list[int]] = {i: [] for i in range(self.num_routed)}
+        expert_k_slots: dict[int, list[int]] = {i: [] for i in range(self.num_routed)}
+        expert_outputs: dict[int, np.ndarray] = {}
 
         for t_idx in range(n_tokens):
             for k_idx in range(self.top_k):
@@ -139,14 +140,12 @@ class DeepSeekMoELens(ParameterizedLens):
         ctx_router = ctx.sub_contexts[0]
         flat_x = ctx.get("flat_x")
         flat_weights = ctx.get("flat_weights")
-        flat_experts = ctx.get("flat_experts")
         shared_contexts = ctx.get("shared_contexts")
         expert_contexts = ctx.get("expert_contexts")
         expert_token_indices = ctx.get("expert_token_indices")
         expert_k_slots = ctx.get("expert_k_slots")
         expert_outputs = ctx.get("expert_outputs")
         orig_shape = ctx.get("orig_shape")
-        n_tokens = ctx.get("n_tokens")
 
         dy_np = grad_y.to_numpy().reshape(-1, self.dim)
 
